@@ -6005,6 +6005,35 @@ var
     end;
   end;
 
+  function RegExprReplaceGroups(rx: TRegExpr; AInputStr : RegExprString; const AReplaceStr : RegExprString; AGroups: string = '') : RegExprString;
+  var
+    PrevPos, i: Integer;
+    Groups: TStringList;
+  begin
+    Result := '';
+    PrevPos := 1;
+    // List of groups to replace. Group numbers must be delimited by space in AGroups
+    // By default all groups will be replaced
+    if AGroups <> '' then begin
+      Groups := TStringList.Create();
+      Groups.DelimitedText := AGroups;
+    end;
+
+    if rx.Exec(AInputStr) then
+      repeat
+        for i := 1 to rx.SubExprMatchCount do begin
+          if (rx.Match[i] <> '') and ((Groups = nil) or (Groups.IndexOf(IntToStr(i)) > -1)) then begin
+            Result := Result + Copy(AInputStr, PrevPos, rx.MatchPos[i] - PrevPos) + AReplaceStr;
+            PrevPos := rx.MatchPos[i] + rx.MatchLen[i];
+          end;
+        end;
+      until not rx.ExecNext;
+
+    Groups.Free;
+
+    Result := Result + Copy(AInputStr, PrevPos, MaxInt); // Tail
+  end;
+
 begin
   Proposal := Sender as TSynCompletionProposal;
   Proposal.ClearList;
@@ -6090,6 +6119,10 @@ begin
       // Trim trailing comma
       if (TableClauses <> '') and (TableClauses[Length(TableClauses)] = ',') then
         TableClauses := Copy(TableClauses, 1, Length(TableClauses) - 1);
+
+      // Remove comments
+      rx.Expression := '("[^"]*(--)*[^"]*"|.)*?(--[^\n\r]*)'.Replace('"', '\' + Conn.QuoteChar);
+      TableClauses := RegExprReplaceGroups(rx, TableClauses, ' ', '3');
 
       // Remove surrounding parentheses
       TableClauses := StringReplace(TableClauses, '(', ' ', [rfReplaceAll]);
