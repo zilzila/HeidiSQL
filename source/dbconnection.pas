@@ -3041,7 +3041,7 @@ begin
         RawPassword := AnsiString(Parameters.Password);
         FLib.sqlite3_key(FHandle, Pointer(RawPassword), Length(RawPassword));
         // See https://utelle.github.io/SQLite3MultipleCiphers/docs/configuration/config_capi/
-        // "These functions return SQLITE_OK even if the provided key isn’t correct. This is because the key isn’t
+        // "These functions return SQLITE_OK even if the provided key isnÂ’t correct. This is because the key isnÂ’t
         // actually used until a subsequent attempt to read or write the database is made. To check whether the
         // provided key was actually correct, you must execute a simple query like e.g. SELECT * FROM sqlite_master;
         // and check whether that succeeds."
@@ -3800,6 +3800,11 @@ end;
 }
 procedure TDBConnection.Query(SQL: String; DoStoreResult: Boolean=False; LogCategory: TDBLogCategory=lcSQL);
 begin
+  if not FActive then begin
+    Log(lcInfo, 'Connection is not active. Reconnecting...');
+    Active := true;
+  end;
+
   if IsLockedByThread and (FLockedByThread.ThreadID <> GetCurrentThreadID) then begin
     Log(lcDebug, _('Waiting for running query to finish ...'));
     try
